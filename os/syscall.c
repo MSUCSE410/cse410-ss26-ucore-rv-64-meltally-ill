@@ -110,8 +110,6 @@ uint64 sys_mmap(uint64 start, uint64 len, int port, int flag, int fd)
 
 		memset(pa, 0, PGSIZE);
 
-		// printf("=======mmap va=%p pa=%p perm=%x========\n", va, pa, perm);
-
 		if (mappages(p->pagetable, va, PGSIZE, (uint64)pa, perm) != 0)
 			return -1;
 	}
