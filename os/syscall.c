@@ -75,55 +75,102 @@ uint64 sys_task_info(uint64 va)
 uint64 sys_mmap(uint64 start, uint64 len, int port, int flag, int fd)
 {
 	struct proc *p = curr_proc();
+
 	if (len == 0)
-	{
 		return 0;
-	}
+
 	if (start % PGSIZE != 0)
-	{
 		return -1;
-	}
+
 	if ((port & ~0x7) != 0)
-	{
 		return -1;
-	}
+
 	if ((port & 0x7) == 0)
-	{
 		return -1;
-	}
+
 	if (len > (1ULL << 30))
-	{
 		return -1;
-	}
 
 	len = PGROUNDUP(len);
-	int perm = PTE_U;
+
+	int perm = PTE_V | PTE_U;
+
 	if (port & 1) perm |= PTE_R;
 	if (port & 2) perm |= PTE_W;
 	if (port & 4) perm |= PTE_X;
-	for (uint64 va = start; va < start + len; va += PGSIZE)
-	{
+
+	for (uint64 va = start; va < start + len; va += PGSIZE) {
+
 		if (walkaddr(p->pagetable, va) != 0)
-		{
 			return -1;
-		}
-		
+
 		void *pa = kalloc();
 		if (pa == 0)
-		{
 			return -1;
-		}
 
 		memset(pa, 0, PGSIZE);
 
+		// printf("=======mmap va=%p pa=%p perm=%x========\n", va, pa, perm);
+
 		if (mappages(p->pagetable, va, PGSIZE, (uint64)pa, perm) != 0)
-		{
 			return -1;
-		}
 	}
-	
+
 	return 0;
 }
+
+// uint64 sys_mmap(uint64 start, uint64 len, int port, int flag, int fd)
+// {
+// 	struct proc *p = curr_proc();
+// 	if (len == 0)
+// 	{
+// 		return 0;
+// 	}
+// 	if (start % PGSIZE != 0)
+// 	{
+// 		return -1;
+// 	}
+// 	if ((port & ~0x7) != 0)
+// 	{
+// 		return -1;
+// 	}
+// 	if ((port & 0x7) == 0)
+// 	{
+// 		return -1;
+// 	}
+// 	if (len > (1ULL << 30))
+// 	{
+// 		return -1;
+// 	}
+
+// 	len = PGROUNDUP(len);
+// 	int perm = PTE_V | PTE_U;
+// 	if (port & 1) perm |= PTE_R;
+// 	if (port & 2) perm |= PTE_W | PTE_R;
+// 	if (port & 4) perm |= PTE_X;
+// 	for (uint64 va = start; va < start + len; va += PGSIZE)
+// 	{
+// 		if (walkaddr(p->pagetable, va) != 0)
+// 		{
+// 			return -1;
+// 		}
+		
+// 		void *pa = kalloc();
+// 		if (pa == 0)
+// 		{
+// 			return -1;
+// 		}
+
+// 		memset(pa, 0, PGSIZE);
+// 		printf("=======mmap va=%p pa=%p perm=%x========\n", va, pa, perm);
+// 		if (mappages(p->pagetable, va, PGSIZE, (uint64)pa, perm) != 0)
+// 		{
+// 			return -1;
+// 		}
+// 	}
+	
+// 	return 0;
+// }
 
 uint64 sys_munmap(uint64 start, uint64 len)
 {
