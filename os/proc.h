@@ -45,6 +45,8 @@ struct proc {
 	uint64 exit_code;
 	struct file *files
 		[FD_BUFFER_SIZE]; //File descriptor table, using to record the files opened by the process
+	uint64 stride;   // stride scheduling: accumulated stride
+	int priority;    // stride scheduling: priority (>= 2, default 16)
 };
 
 int cpuid();
@@ -60,6 +62,7 @@ int wait(int, int *);
 void add_task(struct proc *);
 struct proc *pop_task();
 struct proc *allocproc();
+void freeproc(struct proc *);
 int fdalloc(struct file *);
 int init_stdio(struct proc *);
 int push_argv(struct proc *, char **);

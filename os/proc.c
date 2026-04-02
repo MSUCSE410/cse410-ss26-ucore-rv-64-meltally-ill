@@ -5,6 +5,8 @@
 #include "vm.h"
 #include "queue.h"
 
+#define BIG_STRIDE 65536
+
 struct proc pool[NPROC];
 __attribute__((aligned(16))) char kstack[NPROC][PAGE_SIZE];
 __attribute__((aligned(4096))) char trapframe[NPROC][TRAP_PAGE_SIZE];
@@ -52,20 +54,27 @@ int allocpid()
 
 struct proc *fetch_task()
 {
-	int index = pop_queue(&task_queue);
-	if (index < 0) {
+	struct proc *min_p = NULL;
+	for (struct proc *p = pool; p < &pool[NPROC]; p++) {
+		if (p->state == RUNNABLE) {
+			if (min_p == NULL || p->stride < min_p->stride) {
+				min_p = p;
+			}
+		}
+	}
+	if (min_p == NULL) {
 		debugf("No task to fetch\n");
 		return NULL;
 	}
-	debugf("fetch task %d(pid=%d) from task queue\n", index,
-	       pool[index].pid);
-	return pool + index;
+	min_p->stride += BIG_STRIDE / min_p->priority;
+	debugf("fetch task pid=%d stride=%llu\n", min_p->pid, min_p->stride);
+	return min_p;
 }
 
 void add_task(struct proc *p)
 {
-	push_queue(&task_queue, p - pool);
-	debugf("add task %d(pid=%d) to task queue\n", p - pool, p->pid);
+	// State is already RUNNABLE; fetch_task scans the pool directly.
+	debugf("add task pid=%d\n", p->pid);
 }
 
 // Look in the process table for an UNUSED proc.
@@ -89,6 +98,8 @@ found:
 	p->max_page = 0;
 	p->parent = NULL;
 	p->exit_code = 0;
+	p->stride = 0;
+	p->priority = 16;
 	p->pagetable = uvmcreate((uint64)p->trapframe);
 	memset(&p->context, 0, sizeof(p->context));
 	memset((void *)p->kstack, 0, KSTACK_SIZE);
