@@ -45,6 +45,8 @@ struct proc {
 	struct proc *parent; // Parent process
 	uint64 exit_code;
 	struct file *files[FD_BUFFER_SIZE];
+	uint64 stride;   // stride scheduling: current stride
+	int priority;    // stride scheduling: priority (>= 2, default 16)
 };
 
 int cpuid();
@@ -60,6 +62,7 @@ int wait(int, int *);
 void add_task(struct proc *);
 struct proc *pop_task();
 struct proc *allocproc();
+void freeproc(struct proc *);
 int fdalloc(struct file *);
 // swtch.S
 void swtch(struct context *, struct context *);
